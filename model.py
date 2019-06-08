@@ -9,10 +9,10 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class LSTMClassifier(nn.Module):
 
-	def __init__(self, vocab_size, embedding_dim, hidden_dim, output_size):
+	def __init__(self, vocab_size, embedding_dim, hidden_dim, output_size, is_cuda):
 
 		super(LSTMClassifier, self).__init__()
-
+		self.is_cuda = is_cuda
 		self.embedding_dim = embedding_dim
 		self.hidden_dim = hidden_dim
 		self.vocab_size = vocab_size
@@ -23,17 +23,21 @@ class LSTMClassifier(nn.Module):
 		self.hidden2out = nn.Linear(hidden_dim, output_size)
 		self.softmax = nn.LogSoftmax()
 
-		self.dropout_layer = nn.Dropout(p=0.2)
+		self.dropout_layer = nn.Dropout(p=0.4)
 
 
-	def init_hidden(self, batch_size):
-		return(autograd.Variable(torch.randn(1, batch_size, self.hidden_dim, device='cuda:0')),
-						autograd.Variable(torch.randn(1, batch_size, self.hidden_dim, device='cuda:0')))
+	def init_hidden(self, batch_size, is_cuda):
+		if is_cuda:
+			return(autograd.Variable(torch.randn(1, batch_size, self.hidden_dim, device='cuda:0')),
+							autograd.Variable(torch.randn(1, batch_size, self.hidden_dim, device='cuda:0')))
+		else:
+			return(autograd.Variable(torch.randn(1, batch_size, self.hidden_dim)),
+							autograd.Variable(torch.randn(1, batch_size, self.hidden_dim)))
 
 
 	def forward(self, batch, lengths):
 
-		self.hidden = self.init_hidden(batch.size(-1))
+		self.hidden = self.init_hidden(batch.size(-1), self.is_cuda)
 
 		embeds = self.embedding(batch)
 		packed_input = pack_padded_sequence(embeds, lengths)

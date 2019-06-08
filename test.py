@@ -19,53 +19,49 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 from data import PaddedTensorDataset
 from data import Loader
 from model import LSTMClassifier
+from os.path import join
 
 def main():
-    test()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu', type=bool, default=True, help='use cuda or not')
+    parser.add_argument('--model', type=str, default='default', help='set name of model dir')
+    args = parser.parse_args()
+    test(args)
 
 
-def apply(model, criterion, batch, targets, lengths):
-    pred = model(torch.autograd.Variable(batch), lengths.cpu().numpy())
-    loss = criterion(pred, torch.autograd.Variable(targets))
-    return pred, loss
-
-def evaluate_test_set(model, test, x_to_ix, y_to_ix):
+def evaluate_test_set(model, test, x_to_ix, y_to_ix, is_cuda):
     y_true = list()
     y_pred = list()
-    for batch, targets, lengths, raw_data in utils.create_dataset(test, x_to_ix, y_to_ix, batch_size=1):
+    for batch, targets, lengths, raw_data in utils.create_dataset(test, x_to_ix, y_to_ix, is_cuda, batch_size=1):
         batch, targets, lengths = utils.sort_batch(batch, targets, lengths)
         pred = model(torch.autograd.Variable(batch), lengths.cpu().numpy())
         pred_idx = torch.max(pred, 1)[1]
         y_true += list(targets.int())
         y_pred += list(pred_idx.data.int())
-    y_true = list(map(lambda x: x.cpu(), y_true))
-    y_pred = list(map(lambda x: x.cpu(), y_pred))
+    if is_cuda:
+        y_true = list(map(lambda x: x.cpu(), y_true))
+        y_pred = list(map(lambda x: x.cpu(), y_pred))
     print(len(y_true), len(y_pred))
     print(classification_report(y_true, y_pred))
     print(confusion_matrix(y_true, y_pred))
 
 
-def test():
+def test(args):
     data_loader = Loader('data/test/')
-
+    assert not args.gpu or (args.gpu and torch.cuda.is_available())
     test_data = data_loader.data
-
-    # char_vocab = data_loader.token2id
-    # tag_vocab = data_loader.tag2id
-    # char_vocab_size = len(char_vocab)
-    with open('models/dicts.json', 'r') as f:
+    with open(join('models', args.model, 'params.json'), 'r') as f:
         dicts = json.load(f)
-        char_vocab = dicts['vocab']
+        char_vocab = dicts['chars']
         tag_vocab = dicts['tags']
-        char_vocab_size = len(char_vocab)
-
+    model = torch.load(join('models', args.model, 'model.pt'))
+    model.eval()
     print('Test samples:', len(test_data))
     print(char_vocab)
     print(tag_vocab)
-
-    model = torch.load('models/lstm.pt')
-    model.eval()
-    evaluate_test_set(model, test_data, char_vocab, tag_vocab)
+    test_data = [('$sqrt[8]{x^{8}}$', 'irration_fun'), ('$sqrt[11]{x^{11}}$', 'ration_fun'),
+                 ('$sqrt[462]{x^{462}}$', 'irration_fun'), ('$sqrt[1131]{x^{1131}}$', 'ration_fun')]
+    evaluate_test_set(model, test_data, char_vocab, tag_vocab, args.gpu)
 
 
 if __name__ == '__main__':
