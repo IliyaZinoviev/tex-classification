@@ -4,3 +4,4 @@
 __pycache__
 data/eng-*.txt
 *.csv
+.idea

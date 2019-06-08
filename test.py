@@ -23,7 +23,7 @@ from os.path import join
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=bool, default=True, help='use cuda or not')
+    parser.add_argument('--gpu', type=int, default=0, help='use cuda or not')
     parser.add_argument('--model', type=str, default='default', help='set name of model dir')
     args = parser.parse_args()
     test(args)

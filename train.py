@@ -44,8 +44,8 @@ def main():
                         help='weight_decay rate')
     parser.add_argument('--seed', type=int, default=123,
                         help='seed for random initialisation')
-    parser.add_argument('--gpu', type=bool, default=True,
-                        help='seed for random initialisation')
+    parser.add_argument('--gpu', type=int, default=0,
+                        help='use cuda or not')
     parser.add_argument('--save_to', type=str, default='default',
                         help='set dir name')
     args = parser.parse_args()
@@ -115,6 +115,7 @@ def save_model(model, params, dir):
 
 
 def train(args):
+    print(args)
     assert not args.gpu or (args.gpu and torch.cuda.is_available())
     random.seed(args.seed)
     data_loader = TrainLoader(args.data_dir)
